@@ -1,4 +1,4 @@
-package aalleexxeeii.hocon.sbt
+package com.github.aalleexxeeii.hocon.sbt
 
 import java.io.{FileOutputStream, PrintWriter}
 
@@ -20,13 +20,11 @@ object HoconPlugin extends AutoPlugin {
     lazy val basePurifySettings: Seq[Def.Setting[_]] = Seq(
       hoconExtraResources := Nil,
       hoconPurify := {
-        val logger = streams.value.log
         val args = Def.spaceDelimited("<input> <output>").parsed
         val (i, o) = args match {
-          case Seq(i, o) ⇒ (i, o)
+          case Seq(ii, oo) ⇒ (ii, oo)
           case _ ⇒ sys.error(s"Use: hoconPurify <input> <output>")
         }
-        val taskStreams = streams.value
 
         purify(
           loader = createLoader((fullClasspath in Compile).value),

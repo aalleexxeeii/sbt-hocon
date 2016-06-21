@@ -1,4 +1,4 @@
-import aalleexxeeii.hocon.sbt.HoconPlugin
+import com.github.aalleexxeeii.hocon.sbt.HoconPlugin
 
 scalaVersion := "2.11.7"
 

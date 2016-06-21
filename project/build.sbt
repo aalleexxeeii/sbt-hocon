@@ -1,5 +1,9 @@
-// scalaVersion := "2.11.7"
+organization := "com.github.aalleexxeeii"
+
+name := "sbt-hocon"
+
+description := "sbt plugin with HOCON utilities"
 
 sbtPlugin := true
 
-libraryDependencies += "com.typesafe.akka" % "akka-actor_2.11" % "2.4.3"
+libraryDependencies += "com.typesafe" % "config" % "1.3.0"
