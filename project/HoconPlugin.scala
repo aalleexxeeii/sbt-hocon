@@ -1,6 +1,6 @@
 package com.github.aalleexxeeii.hocon.sbt
 
-import java.io.{FileOutputStream, PrintWriter}
+import java.io.{FileOutputStream, OutputStream, PrintStream, PrintWriter}
 
 import com.typesafe.config._
 import sbt.Keys._
@@ -45,11 +45,9 @@ object HoconPlugin extends AutoPlugin {
     )
   }
 
-  import autoImport._
-
   def createLoader(cp: Seq[Attributed[File]]) = ClasspathUtilities.toLoader(cp map (_.data))
 
-  override val projectSettings = basePurifySettings
+  override val projectSettings = autoImport.basePurifySettings
   //inConfig(Compile)(basePurifySettings)
 
   def readDefaults(loader: ClassLoader, extraResources: Seq[String] = Nil) = {
@@ -58,7 +56,7 @@ object HoconPlugin extends AutoPlugin {
     extraResources.foldRight(referenceConfig)(parseResource(_) withFallback _)
   }
 
-  def purify(loader: ClassLoader, input: String, output: PrintWriter, extraResources: Seq[String] = Nil) = {
+  def purify(loader: ClassLoader, input: String, output: OutputStream, extraResources: Seq[String] = Nil) = {
     val inputConfig = ConfigFactory.parseString(input, parseOptions)
     val defaults = readDefaults(loader, extraResources)
 
@@ -87,16 +85,20 @@ object HoconPlugin extends AutoPlugin {
     dump(restored, output)
   }
 
-  def defaults(loader: ClassLoader, output: PrintWriter, extraResources: Seq[String] = Nil) = {
+  def defaults(loader: ClassLoader, output: OutputStream, extraResources: Seq[String] = Nil) = {
     val config = readDefaults(loader, extraResources)
     dump(config, output)
   }
 
-  def dump(config: Config, output: PrintWriter): String = {
+  def dump(config: Config, output: OutputStream): String = {
     val rendered = render(config)
-    output.print(rendered)
-    output.flush()
-    output.close()
+    val writer = new PrintWriter(output)
+    writer.print(rendered)
+    writer.flush()
+    output match {
+      case _: PrintStream ⇒
+      case _ ⇒ output.close()
+    }
     rendered
   }
 
@@ -111,10 +113,8 @@ object HoconPlugin extends AutoPlugin {
   }.getLines() mkString "\n"
 
   def outputWriter(path: String) = path match {
-    case "-" ⇒
-      //streams.value.text()
-      new PrintWriter(System.out)
-    case _ ⇒ new PrintWriter(new FileOutputStream(path))
+    case "-" ⇒ System.out
+    case _ ⇒ new FileOutputStream(path)
   }
 
 
