@@ -97,7 +97,7 @@ object HoconPlugin extends AutoPlugin {
 
   def defaults(loader: ClassLoader, output: OutputStream, extraResources: Seq[String] = Nil) = {
     val config = readDefaults(loader, extraResources)
-    dump(config, output)
+    dump(unescape(render(config)), output)
   }
 
   private val EscapePrefix = "\ufff0"
