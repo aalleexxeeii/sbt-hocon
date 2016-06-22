@@ -4,7 +4,7 @@ name := "sbt-hocon"
 
 description := "sbt plugin with HOCON utilities"
 
-version := "0.1.0"
+version := "0.1.1"
 
 sbtPlugin := true
 

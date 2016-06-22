@@ -17,7 +17,7 @@ object HoconPlugin extends AutoPlugin {
     lazy val hoconPurify = inputKey[String]("Purify source HOCON configuration removing settings coniciding with defaults")
     lazy val hoconDefaults = inputKey[String]("Generate joint HOCON configuration with defaults")
 
-    lazy val basePurifySettings: Seq[Def.Setting[_]] = Seq(
+    lazy val baseHoconSettings: Seq[Def.Setting[_]] = Seq(
       hoconExtraResources := Nil,
       hoconPurify := {
         val args = Def.spaceDelimited("<input> <output>").parsed
@@ -45,10 +45,14 @@ object HoconPlugin extends AutoPlugin {
     )
   }
 
+  import autoImport._
+
+  override def trigger = allRequirements
+
   def createLoader(cp: Seq[Attributed[File]]) = ClasspathUtilities.toLoader(cp map (_.data))
 
-  override val projectSettings = autoImport.basePurifySettings
-  //inConfig(Compile)(basePurifySettings)
+  override lazy val projectSettings = baseHoconSettings
+  //inConfig(Compile)(baseHoconSettings)
 
   def readDefaults(loader: ClassLoader, extraResources: Seq[String] = Nil) = {
     def parseResource(path: String) = ConfigFactory.parseResources(loader, path, parseOptions)
