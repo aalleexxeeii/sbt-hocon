@@ -55,13 +55,15 @@ object HoconPlugin extends AutoPlugin {
   //inConfig(Compile)(baseHoconSettings)
 
   def readDefaults(loader: ClassLoader, extraResources: Seq[String] = Nil) = {
-    def parseResource(path: String) = ConfigFactory.parseResources(loader, path, parseOptions)
+    def parseResource(path: String) = escapeUnresolved {
+      ConfigFactory.parseResources(loader, path, parseOptions)
+    }
     val referenceConfig = parseResource("reference.conf")
     extraResources.foldRight(referenceConfig)(parseResource(_) withFallback _)
   }
 
   def purify(loader: ClassLoader, input: String, output: OutputStream, extraResources: Seq[String] = Nil) = {
-    val inputConfig = ConfigFactory.parseString(input, parseOptions)
+    val inputConfig = escapeUnresolved(ConfigFactory.parseString(input, parseOptions))
     val defaults = readDefaults(loader, extraResources)
 
     val inputSet = toPairSet(inputConfig)
@@ -73,20 +75,24 @@ object HoconPlugin extends AutoPlugin {
     if (true /* TODO: setting for cloning comments */ ) {
       diff = diff map {
         case (key, value) ⇒
-          key → defaultsMap.get(key).map { v ⇒
-            val referenceComments = comments(v)
-            val inputComments = comments(value)
-            value.withOrigin(
-              v.origin.withComments(
-                (if (inputComments.isEmpty) referenceComments else inputComments).asJava
+          key → {
+            defaultsMap.get(key) map { v ⇒
+              val referenceComments = comments(v)
+              val inputComments = comments(value)
+              value.withOrigin(
+                v.origin.withComments(
+                  (if (inputComments.isEmpty) referenceComments else inputComments).asJava
+                )
               )
-            )
-          }.getOrElse(value)
+            } getOrElse value
+          }
       }
     }
 
     val restored = ConfigFactory.parseMap(diff.toMap.asJava)
-    dump(restored, output)
+    val raw = render(restored)
+    val unescaped = unescape(raw)
+    dump(unescaped, output)
   }
 
   def defaults(loader: ClassLoader, output: OutputStream, extraResources: Seq[String] = Nil) = {
@@ -94,20 +100,44 @@ object HoconPlugin extends AutoPlugin {
     dump(config, output)
   }
 
-  def dump(config: Config, output: OutputStream): String = {
-    val rendered = render(config)
+  private val EscapePrefix = "\ufff0"
+  private val EscapeSuffix = "\ufff1"
+  private val EscapedPattern = s"""(?m)\"$EscapePrefix(.+)$EscapeSuffix\"""".r
+
+  def escapeUnresolved(config: Config): Config = {
+    val unmergeables = toPairSet(config) collect {
+      case (path, v@UnmergeableBridge()) ⇒
+        val raw = v.render(renderOptions)
+        path → ConfigValueFactory.fromAnyRef(s"$EscapePrefix$raw$EscapeSuffix").withOrigin(v.origin())
+    }
+    unmergeables.foldLeft(config) { case (c, (path, value)) ⇒ c.withValue(path, value) }
+  }
+
+  protected def unescape(text: String) =
+    EscapedPattern.replaceAllIn(text, { m ⇒
+      val quoted = m.group(1)
+      val unquoted = ConfigFactory.parseString(s"""x="$quoted"""").getString("x")
+      unquoted.replace("$", "\\$")
+    })
+
+  protected def dump(config: Config, output: OutputStream): String = {
+    dump(render(config), output)
+  }
+
+  protected def dump(text: String, output: OutputStream): String = {
     val writer = new PrintWriter(output)
-    writer.print(rendered)
+    writer.print(text)
     writer.flush()
     output match {
       case _: PrintStream ⇒
       case _ ⇒ output.close()
     }
-    rendered
+    text
   }
 
   protected val resolveOptions = ConfigResolveOptions.defaults().setAllowUnresolved(true).setUseSystemEnvironment(false)
   protected val parseOptions = ConfigParseOptions.defaults().setAllowMissing(true)
+  protected val renderOptions = ConfigRenderOptions.defaults().setOriginComments(false).setJson(false)
 
   protected def readInput(path: String): String = {
     path match {
@@ -130,5 +160,13 @@ object HoconPlugin extends AutoPlugin {
 
   def comments(v: ConfigValue): List[String] =
     v.origin().comments().asScala.toList
+
+  private object UnmergeableBridge {
+    // reflection due to package access level in impl.* classes and cross-classloader issues
+    private val classUnmergeable = Class.forName("com.typesafe.config.impl.Unmergeable", true, getClass.getClassLoader)
+
+    def unapply(v: ConfigValue): Boolean =
+      classUnmergeable isInstance v
+  }
 
 }
