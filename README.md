@@ -9,8 +9,10 @@ The sbt plugin intended to perform a number of utility operations with [Typesafe
 
 ## Usage
 Add the following lines to `project/plugins.sbt`. See the section [Using Plugins](http://www.scala-sbt.org/release/tutorial/Using-Plugins.html) in the sbt wiki for more information.
-
-    addSbtPlugin("com.github.aalleexxeeii" % "sbt-hocon" % "0.1.3")
+```scala
+resolvers += Resolver.sonatypeRepo("releases")
+addSbtPlugin("com.github.aalleexxeeii" % "sbt-hocon" % "0.1.3")
+```
 ## Tasks
 ### hoconDefaults
 This task collects all reference configurations from project compile dependencies and produces a singe HOCON file from their combination.
