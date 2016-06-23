@@ -4,8 +4,6 @@ name := "sbt-hocon"
 
 description := "sbt plugin with HOCON utilities"
 
-version := "0.1.2"
-
 sbtPlugin := true
 
 homepage := Some(url("https://github.com/aalleexxeeii/sbt-hocon"))
