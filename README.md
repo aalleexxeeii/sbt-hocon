@@ -3,7 +3,7 @@ The sbt plugin intended to perform a number of utility operations with [Typesafe
 
 ## Features
  * Generate full reference configuration discovered from project dependencies.
- * Purify custom HACON files by removing settings coniciding with defaults, 
+ * Purify custom HOCON files by removing settings coniciding with defaults, 
    supplying with comments taken from reference configuration, 
    formatting with proper structure and indentation. 
 
