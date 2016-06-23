@@ -17,4 +17,9 @@ scmInfo := Some(
 
 licenses += "Apache-2.0" → url("https://www.apache.org/licenses/LICENSE-2.0.html")
 
-libraryDependencies += "com.typesafe" % "config" % "1.3.0"
+libraryDependencies ++= Seq(
+  "com.typesafe" % "config" % "1.3.0",
+  "com.github.scopt" %% "scopt" % "3.5.0"
+)
+
+resolvers += Resolver.sonatypeRepo("public")
