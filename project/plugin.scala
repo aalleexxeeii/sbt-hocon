@@ -74,7 +74,7 @@ object HoconPlugin extends AutoPlugin {
 
     var diff = inputSet.diff(defaultsSet)
 
-    if (true /* TODO: setting for cloning comments */ ) {
+    if (options.common.commentMode != CommentMode.Off) {
       diff = diff map {
         case (key, value) ⇒
           key → {
@@ -83,7 +83,11 @@ object HoconPlugin extends AutoPlugin {
               val inputComments = comments(value)
               value.withOrigin(
                 v.origin.withComments(
-                  (if (inputComments.isEmpty) referenceComments else inputComments).asJava
+                  (options.common.commentMode match {
+                    case CommentMode.Override ⇒ if (inputComments.isEmpty) referenceComments else inputComments
+                    case CommentMode.Merge ⇒ referenceComments ::: inputComments
+                    case unsupported ⇒ sys.error(s"Unsupported comment mode: $unsupported")
+                  }).asJava
                 )
               )
             } getOrElse value
