@@ -2,6 +2,8 @@ package com.github.aalleexxeeii.hocon.sbt
 
 import java.io.{FileOutputStream, OutputStream, PrintStream, PrintWriter}
 
+import com.github.aalleexxeeii.hocon.sbt.opt.Common.{CommentMode, _}
+import com.github.aalleexxeeii.hocon.sbt.opt.{Common, Defaults, Purify}
 import com.typesafe.config._
 import sbt.Keys._
 import sbt.classpath.ClasspathUtilities
@@ -20,27 +22,27 @@ object HoconPlugin extends AutoPlugin {
     lazy val baseHoconSettings: Seq[Def.Setting[_]] = Seq(
       hoconExtraResources := Nil,
       hoconPurify := {
-        val args = Def.spaceDelimited("<input> <output>").parsed
-        val (i, o) = args match {
-          case Seq(ii, oo) ⇒ (ii, oo)
-          case _ ⇒ sys.error(s"Use: hoconPurify <input> <output>")
-        }
-
-        purify(
-          loader = createLoader((fullClasspath in Compile).value),
-          input = readInput(i),
-          output = outputWriter(o),
-          extraResources = hoconExtraResources.value
-        )
+        val args = Def.spaceDelimited(Purify.parser.usage).parsed
+        Purify.parser.parse(args, Purify()) map { opt ⇒
+          purify(
+            loader = createLoader((fullClasspath in Compile).value),
+            input = readInput(opt.input),
+            output = outputWriter(opt.output),
+            extraResources = hoconExtraResources.value,
+            options = opt
+          )
+        } getOrElse sys.error("Wrong arguments")
       },
       hoconDefaults := {
-        val args = Def.spaceDelimited("[<output>]").parsed
-        if (args.size > 1) sys.error(s"Use: hoconDefaults [<output>]")
-        defaults(
-          loader = createLoader((fullClasspath in Compile).value),
-          output = outputWriter(args.headOption getOrElse "-"),
-          extraResources = hoconExtraResources.value
-        )
+        val args = Def.spaceDelimited(Defaults.parser.usage).parsed
+        Defaults.parser.parse(args, Defaults()) map { opt ⇒
+          defaults(
+            loader = createLoader((fullClasspath in Compile).value),
+            output = outputWriter(opt.output),
+            extraResources = hoconExtraResources.value,
+            options = opt
+          )
+        } getOrElse sys.error("Wrong arguments")
       }
     )
   }
@@ -62,7 +64,7 @@ object HoconPlugin extends AutoPlugin {
     extraResources.foldRight(referenceConfig)(parseResource(_) withFallback _)
   }
 
-  def purify(loader: ClassLoader, input: String, output: OutputStream, extraResources: Seq[String] = Nil) = {
+  def purify(loader: ClassLoader, input: String, output: OutputStream, extraResources: Seq[String] = Nil, options: Purify) = {
     val inputConfig = escapeUnresolved(ConfigFactory.parseString(input, parseOptions))
     val defaults = readDefaults(loader, extraResources)
 
@@ -90,14 +92,14 @@ object HoconPlugin extends AutoPlugin {
     }
 
     val restored = ConfigFactory.parseMap(diff.toMap.asJava)
-    val raw = render(restored)
+    val raw = render(restored, options.common)
     val unescaped = unescape(raw)
     dump(unescaped, output)
   }
 
-  def defaults(loader: ClassLoader, output: OutputStream, extraResources: Seq[String] = Nil) = {
+  def defaults(loader: ClassLoader, output: OutputStream, extraResources: Seq[String] = Nil, options: Defaults) = {
     val config = readDefaults(loader, extraResources)
-    dump(unescape(render(config)), output)
+    dump(unescape(render(config, options.common)), output)
   }
 
   private val EscapePrefix = "\ufff0"
@@ -141,13 +143,13 @@ object HoconPlugin extends AutoPlugin {
 
   protected def readInput(path: String): String = {
     path match {
-      case "-" ⇒ Source.fromInputStream(System.in)
+      case StdStreamSymbol ⇒ Source.fromInputStream(System.in)
       case _ ⇒ Source.fromFile(path)
     }
   }.getLines() mkString "\n"
 
   def outputWriter(path: String) = path match {
-    case "-" ⇒ System.out
+    case StdStreamSymbol ⇒ System.out
     case _ ⇒ new FileOutputStream(path)
   }
 
@@ -155,8 +157,12 @@ object HoconPlugin extends AutoPlugin {
   def toPairSet(config: Config) =
     config.resolve(resolveOptions).entrySet().asScala.map(e ⇒ e.getKey → e.getValue)
 
-  def render(config: Config) =
-    config.root.render(ConfigRenderOptions.defaults.setOriginComments(false).setJson(false))
+  def render(config: Config, options: Common = Common()) =
+    config.root.render(ConfigRenderOptions.defaults
+      .setComments(options.commentMode != CommentMode.Off)
+      .setOriginComments(false)
+      .setJson(false)
+    )
 
   def comments(v: ConfigValue): List[String] =
     v.origin().comments().asScala.toList
