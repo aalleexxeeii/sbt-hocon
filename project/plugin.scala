@@ -56,17 +56,18 @@ object HoconPlugin extends AutoPlugin {
   override lazy val projectSettings = baseHoconSettings
   //inConfig(Compile)(baseHoconSettings)
 
-  def readDefaults(loader: ClassLoader, extraResources: Seq[String] = Nil) = {
-    def parseResource(path: String) = escapeUnresolved {
-      ConfigFactory.parseResources(loader, path, parseOptions)
-    }
+  def readDefaults(loader: ClassLoader, extraResources: Seq[String] = Nil, options: Common) = {
+    def parseResource(path: String) = escapeUnresolved(
+      ConfigFactory.parseResources(loader, path, parseOptions),
+      options
+    )
     val referenceConfig = parseResource("reference.conf")
     extraResources.foldRight(referenceConfig)(parseResource(_) withFallback _)
   }
 
   def purify(loader: ClassLoader, input: String, output: OutputStream, extraResources: Seq[String] = Nil, options: Purify) = {
-    val inputConfig = escapeUnresolved(ConfigFactory.parseString(input, parseOptions))
-    val defaults = readDefaults(loader, extraResources)
+    val inputConfig = escapeUnresolved(ConfigFactory.parseString(input, parseOptions), options.common)
+    val defaults = readDefaults(loader, extraResources, options.common)
 
     val inputSet = toPairSet(inputConfig)
     val defaultsSet = toPairSet(defaults)
@@ -102,7 +103,7 @@ object HoconPlugin extends AutoPlugin {
   }
 
   def defaults(loader: ClassLoader, output: OutputStream, extraResources: Seq[String] = Nil, options: Defaults) = {
-    val config = readDefaults(loader, extraResources)
+    val config = readDefaults(loader, extraResources, options.common)
     dump(unescape(render(config, options.common)), output)
   }
 
@@ -110,10 +111,10 @@ object HoconPlugin extends AutoPlugin {
   private val EscapeSuffix = "\ufff1"
   private val EscapedPattern = s"""(?m)\"$EscapePrefix(.+)$EscapeSuffix\"""".r
 
-  def escapeUnresolved(config: Config): Config = {
+  def escapeUnresolved(config: Config, options: Common): Config = {
     val unmergeables = toPairSet(config) collect {
       case (path, v@UnmergeableBridge()) ⇒
-        val raw = v.render(renderOptions)
+        val raw = v.render(renderOptions.setOriginComments(options.originComments))
         path → ConfigValueFactory.fromAnyRef(s"$EscapePrefix$raw$EscapeSuffix").withOrigin(v.origin())
     }
     unmergeables.foldLeft(config) { case (c, (path, value)) ⇒ c.withValue(path, value) }
@@ -164,7 +165,7 @@ object HoconPlugin extends AutoPlugin {
   def render(config: Config, options: Common = Common()) =
     config.root.render(ConfigRenderOptions.defaults
       .setComments(options.commentMode != CommentMode.Off)
-      .setOriginComments(false)
+      .setOriginComments(options.originComments)
       .setJson(false)
     )
 

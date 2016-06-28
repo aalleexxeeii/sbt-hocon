@@ -5,7 +5,8 @@ import com.github.aalleexxeeii.hocon.sbt.utils.{Enum, EnumCompanion}
 import scopt.OptionParser
 
 case class Common(
-  commentMode: CommentMode = CommentMode.Override
+  commentMode: CommentMode = CommentMode.Override,
+  originComments: Boolean = false
 )
 
 object Common {
@@ -20,11 +21,16 @@ object Common {
   }
 
   trait Parser[T <: Common.With[T]] extends OptionParser[T] {
-    opt[CommentMode]("comment-mode")
+    opt[CommentMode]("comments")
       .optional()
       .valueName(CommentMode.valueOf.keys.mkString("|"))
       .text("Mode for comments: 'off' - no comments; 'override' - use top-level comment (default); 'merge' - merge all comments together")
       .action((x, o) ⇒ o.combine(o.common.copy(commentMode = x)))
+
+    opt[Unit]("origin-comments")
+      .optional()
+      .text("Include origin in comments")
+      .action((_, o) ⇒ o.combine(o.common.copy(originComments = true)))
 
     // help("help") -- terminates JVM
     opt[Unit]("help")
