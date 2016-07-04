@@ -10,21 +10,21 @@ The sbt plugin intended to perform a number of utility operations with [Typesafe
 ## Usage
 Add the following lines to `project/plugins.sbt`. See the section [Using Plugins](http://www.scala-sbt.org/release/docs/Using-Plugins.html) in the sbt wiki for more information.
 ```scala
-addSbtPlugin("com.github.aalleexxeeii" % "sbt-hocon" % "0.1.6")
+addSbtPlugin("com.github.aalleexxeeii" % "sbt-hocon" % "0.1.7")
 ```
 ## Tasks
 ### hoconDefaults
 This task collects all reference configurations from project compile dependencies and produces a singe HOCON file from their combination.
     
     hoconDefaults [options] [<output>]
-If `-` is specified as `<output>`, the result will be sent to the standard output stream.
+If `@` is specified as `<output>`, the result will be sent to the standard output stream.
 
 ### hoconPurify
 This task reads configuration from file `<input>`, compares it with defaults discovered from project dependencies,
 removes settings with values no different from defaults and dumps the result to `<output>` file.
 
     hoconPurify [options] <input> <output>
-`-` can be specified instead of file paths to work with the standard input and output streams respectively.
+`@` can be specified instead of file paths to work with the standard input and output streams respectively.
 
 ## Keys
  * `hoconExtraResources` — additional reference files to consider (`Seq[String]]`)
