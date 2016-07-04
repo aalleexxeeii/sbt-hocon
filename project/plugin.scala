@@ -163,11 +163,17 @@ object HoconPlugin extends AutoPlugin {
     config.resolve(resolveOptions).entrySet().asScala.map(e ⇒ e.getKey → e.getValue)
 
   def render(config: Config, options: Common = Common()) =
-    config.root.render(ConfigRenderOptions.defaults
+    applyPathRestrictions(config, options).root.render(ConfigRenderOptions.defaults
       .setComments(options.commentMode != CommentMode.Off)
       .setOriginComments(options.originComments)
       .setJson(false)
     )
+
+  def applyPathRestrictions(config: Config, options: Common) =
+    options.exclusions.foldLeft {
+      if (options.inclusions.isEmpty) config
+      else options.inclusions map config.withOnlyPath reduce (_ withFallback _)
+    }(_ withoutPath _)
 
   def comments(v: ConfigValue): List[String] =
     v.origin().comments().asScala.toList

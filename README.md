@@ -16,18 +16,29 @@ addSbtPlugin("com.github.aalleexxeeii" % "sbt-hocon" % "0.1.6")
 ### hoconDefaults
 This task collects all reference configurations from project compile dependencies and produces a singe HOCON file from their combination.
     
-    hoconDefaults [<output>]
+    hoconDefaults [options] [<output>]
 If `-` is specified as `<output>`, the result will be sent to the standard output stream.
 
 ### hoconPurify
 This task reads configuration from file `<input>`, compares it with defaults discovered from project dependencies,
 removes settings with values no different from defaults and dumps the result to `<output>` file.
 
-    hoconPurify <input> <output>
+    hoconPurify [options] <input> <output>
 `-` can be specified instead of file paths to work with the standard input and output streams respectively.
 
 ## Keys
  * `hoconExtraResources` — additional reference files to consider (`Seq[String]]`)
+
+# Options
+A number of options can be specified for every task to customize beghavior.
+ 
+ * `-c, --comment <mode>` — Mode for comments: 
+   * `off` - no comments; 
+   * `override` - use top-level comment (default); 
+   * `merge` - merge all comments together. 
+ * `--origin-comments` — Include origin in comments
+ * `-i, --include <path1>[,<path2>...]` — Include just the given paths
+ * `-x, --exclude <path1>[,<path2>...]` — Exclude the given paths
 
 # License
 This software is under the [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html).

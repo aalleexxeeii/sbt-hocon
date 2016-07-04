@@ -6,13 +6,13 @@ import scopt.OptionParser
 
 case class Common(
   commentMode: CommentMode = CommentMode.Override,
-  originComments: Boolean = false
+  originComments: Boolean = false,
+  inclusions: List[String] = Nil,
+  exclusions: List[String] = Nil
 )
 
 object Common {
   final val StdStreamSymbol = "@"
-
-  // "-" -- conflicts with option prefix
 
   trait With[T] {
     def common: Common
@@ -21,7 +21,7 @@ object Common {
   }
 
   trait Parser[T <: Common.With[T]] extends OptionParser[T] {
-    opt[CommentMode]("comments")
+    opt[CommentMode]('c', "comments")
       .optional()
       .valueName(CommentMode.valueOf.keys.mkString("|"))
       .text("Mode for comments: 'off' - no comments; 'override' - use top-level comment (default); 'merge' - merge all comments together")
@@ -32,8 +32,18 @@ object Common {
       .text("Include origin in comments")
       .action((_, o) ⇒ o.combine(o.common.copy(originComments = true)))
 
+    opt[Seq[String]]('i', "include")
+      .valueName("<path1>[,<path2>...]")
+      .text("Include just the given paths")
+      .action((x, o) ⇒ o.combine(o.common.copy(inclusions = o.common.inclusions ++ x)))
+
+    opt[Seq[String]]('x', "exclude")
+      .valueName("<path1>[,<path2>...]")
+      .text("Exclude the given paths")
+      .action((x, o) ⇒ o.combine(o.common.copy(exclusions = o.common.exclusions ++ x)))
+
     // help("help") -- terminates JVM
-    opt[Unit]("help")
+    opt[Unit]('h', "help")
       .text("Show this help")
       .action { (_, c) ⇒ showUsage(); c }
       .validate(_ ⇒ Left("Help requested"))
